@@ -1,4 +1,14 @@
-Term:
+Phase 1:
 
-TWin:
+Edit:
+· Aufteilen in TWEditor und TWEditorLines
+· insert_at schreiben um einen beliebigen string an einer beliebigen Position im
+  Editor einfügen zu können
+· TWEditorLines muss analoge Funktionen zu TWEditor besitzen, die Löschen,
+  Einfügen, Bewegen... implementieren (TWEditorLines muss ein lines_x Member
+  haben)
+· move_xy für TWEditor implementieren, das den Cursor auch bewegt
 
+Phase 2:
+TWEditor und TWEditorLines:
+· mehrzeiliger Editor
