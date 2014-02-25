@@ -7,14 +7,88 @@ import termios
 from twin import TWin
 from keys import Keys, ansi
 
-class Edit(TWin):
+class EditLine:
+  def __init__( self, line="" ):
+    self.line = line
+    self.cursor_x = len(line)
+
+  def insert_before_cursor( self, string ):
+    self.line = self.line[0:self.cursor_x] + string + self.line[self.cursor_x:]
+    self.cursor_x += len(string)
+
+  def delete_before_cursor( self, num_chars ):
+    """ deletes min(num_chars, number of characters before cursor) before cursor
+        position and returns how many characters were deleted.
+    """
+    if num_chars > self.cursor_x: num_chars = self.cursor_x
+    self.line = self.line[0:self.cursor_x-num_chars] + self.line[self.cursor_x:]
+    self.cursor_x -= num_chars
+    return num_chars
+
+  def delete_from_cursor_to_end( self, num_chars ):
+    """ deletes min(num_chars, number of characters after cursor) after cursor
+        position and returns how many characters were deleted.
+    """
+    if num_chars > len(self.line) - self.cursor_x:
+      num_chars = len(self.line) - self.cursor_x
+    self.line = self.line[0:self.cursor_x] + \
+                self.line[self.cursor_x + num_chars:]
+    return num_chars
+
+  def get_cursor_x( self ): return self.cursor_x
+
+  def get_nchars_from_cursor_to_end( self ):
+    """ Get the number of characters counted from the current cursor position to
+        the end of the line.
+    """
+    return len(self.line) - self.cursor_x
+
+  def get_nchars_before_cursor( self ):
+    """ Get the number of characters before the cursor.
+    """
+    return self.cursor_x
+
+  def get_line_before_cursor( self, num_chars )
+    """ return at most min( num_chars, number of characters before cursor )
+        characters in the line, before the cursor position.
+    """
+    num_chars = min( self.cursor_x, num_chars )
+    return self.line[ self.cursor_x-num_chars:self.cursor_x ]
+
+
+  def get_line_from_cursor_to_right( self, num_chars=None ):
+    """ Get num_chars from and including the character at cursor position to the
+        right; if num_chars = None: return all characters from and including the
+        one at the cursor position to the right. if 
+    """
+    return self.line[self.cursor_x:]
+
+  def move_cursor_right( self, num_chars ):
+    """ moves the cursor min( num_chars, self.get_nchars_from_cursor_to_end() )
+        characters to the right.
+    """
+    self.cursor_x += min( num_chars, self.get_nchars_from_cursor_to_end() )
+
+  def move_cursor_left( self, num_chars )
+    """ moves the cursor min( num_chars, self.get_nchars_before_cursor() )
+        characters to the left. Returns how many characters the cursor was
+        moved
+    """
+    num_chars = min( num_chars, self.get_nchars_before_cursor() )
+    self.cursor_x -= num_chars
+    return num_chars
+
+  def get_length( self ): return len(self.line)
+
+
+
+class TWEdit(TWin):
   def __init__( self, x = None, y = None, width = None ):
     self.map_keys()
-    self.line_x = 0
+    self.line = EditorLines("")
     self.cursor_x = 1
     self.quit_loop = False
-    self.line = None
-    super(Edit, self).__init__( x, y, width, 1 )
+    super(TWEdit, self).__init__( x, y, width, 1 )
 
   def map_keys(self):
     self.keymap = {}
@@ -32,34 +106,31 @@ class Edit(TWin):
   def quit( self, key ): self.quit_loop = True
 
   def write_char( self, key ):
-    if self.line == None: self.line = ""
-
-    self.line = self.line[0:self.line_x] + key + self.line[self.line_x:]
+    self.line.insert_before_cursor( key )
     x, y, width, height = self.get_inner_dimensions()
     if self.cursor_x == width:
       self.cursor_x = int(width/2)
-      from_right = self.cursor_x + (len(self.line) - self.line_x - 1)
-      self.replace_to_right( self.line[-from_right:], 1, width )
+      characters_after_cursor = self.line.get_line_from_cursor_to_right(width)
+      self.replace_to_right( characters_after_cursor, 1, width)
     else:
       self.move_xy( self.cursor_x, 1 )
-      max_num_chars = min( len(self.line), width-self.cursor_x )
-      sys.stdout.write( self.line[self.line_x:self.line_x+max_num_chars] )
+      max_num_chars = min( self.line.get_length(), width-self.cursor_x )
+      sys.stdout.write( self.line.get_line_from_cursor_to_right(max_num_chars) )
       self.move_xy( self.cursor_x+1, 1 )
     self.cursor_x += 1
-    self.line_x += 1
     sys.stdout.flush()
 
   def move_left( self, key ):
-    if self.cursor_x > 1:
-      self.move_xy( self.cursor_x-1, 1 )
-      self.line_x -= 1
+    num_chars_moved = self.line.move_cursor_left(1)
+    if self.cursor_x > num_chars_moved:
+      self.move_xy( self.cursor_x-num_chars_moved, 1 )
+      self.line.move_left()
       self.cursor_x -= 1
-    elif self.line_x > 0:
+    elif num_chars_moved > 0:
       x, y, width, height = self.get_inner_dimensions()
-      self.line_x -= 1
-      self.cursor_x = min( int(width/2), self.line_x+1 )
-      line_start = max( 0, self.line_x - self.cursor_x + 1 )
-      self.replace_to_right( self.line[line_start:], 1 )
+      chars_before_cursor = self.line.get_line_before_cursor( width/2 )
+      self.cursor_x = len(chars_before_cursor)
+      self.replace_to_right( chars_before_cursor, 1 )
     sys.stdout.flush()
 
   def move_right( self, key ):
@@ -87,6 +158,12 @@ class Edit(TWin):
       line_start = self.line_x - self.cursor_x + 1
       self.replace_to_right( self.line[line_start:], 1 )
       self.line_x = len(self.line)
+    else:
+      from_back    = len(self.line) - self.line_x
+      to_beginning = from_back + self.cursor_x - 1
+      self.cursor_x = to_beginning + 1
+      self.line_x   = len(self.line)
+      self.move_xy( self.cursor_x, 1 )
 
   def del_at( self, key ):
     if self.line_x < len(self.line):
@@ -185,9 +262,9 @@ class Edit(TWin):
     self.flush()
     return rval
 
+
 if __name__ == "__main__":
-  from term import Term
-  x, y = Term.get_xy()
-  with Edit( 4, y ) as edit:
+  x, y = TWEdit.get_xy()
+  with TWEdit( 4, y ) as edit:
     edit.event_loop()
   print()
