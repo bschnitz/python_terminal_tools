@@ -29,11 +29,6 @@ class EditLine():
     end   = None if num_chars == None else start+num_chars
     return self.line[ start : end ]
 
-  def chars_before_cursor( self ):
-    """ returns the characters in the line before the cursor
-    """
-    return self.line[0:self.cursor_x]
-
   def nchars_before_cursor( self, max_num_chars ):
     """ returns how many characters are before the cursor, but at most
         max_num_chars
@@ -77,7 +72,7 @@ class EditLine():
     return num_chars
 
   def move_cursor_right( self, num_chars ):
-    """ moves the cursor min( num_chars, nchars_from_cursor_to_end() )
+    """ moves the cursor min(num_chars, number of characters from cursor to end)
         characters to the right. Returns how many characters the cursor was
         actually moved.
     """
@@ -86,64 +81,13 @@ class EditLine():
     return num_chars
 
   def move_cursor_left( self, num_chars ):
-    """ moves the cursor min( num_chars, self.get_nchars_before_cursor() )
+    """ moves the cursor min( num_chars, number of characters before cursor )
         characters to the left. Returns how many characters the cursor was
         actually moved.
     """
     num_chars = min( num_chars, self.cursor_x )
     self.cursor_x -= num_chars
     return num_chars
-
-
-  def delete_before_cursor( self, num_chars ):
-    """ deletes min(num_chars, number of characters before cursor) before cursor
-        position and returns how many characters were deleted.
-    """
-    if num_chars > self.cursor_x: num_chars = self.cursor_x
-    self.line = self.line[0:self.cursor_x-num_chars] + self.line[self.cursor_x:]
-    self.cursor_x -= num_chars
-    return num_chars
-
-  def delete_from_cursor_to_end( self, num_chars ):
-    """ deletes min(num_chars, number of characters after cursor) after cursor
-        position and returns how many characters were deleted.
-    """
-    if num_chars > len(self.line) - self.cursor_x:
-      num_chars = len(self.line) - self.cursor_x
-    self.line = self.line[0:self.cursor_x] + \
-                self.line[self.cursor_x + num_chars:]
-    return num_chars
-
-  def get_cursor_x( self ): return self.cursor_x
-
-  def nchars_from_cursor_to_end( self ):
-    """ Get the number of characters counted from the current cursor position to
-        the end of the line.
-    """
-    return len(self.line) - self.cursor_x
-
-  def get_nchars_before_cursor( self ):
-    """ Get the number of characters before the cursor.
-    """
-    return self.cursor_x
-
-  def get_line_before_cursor( self, num_chars ):
-    """ return at most min( num_chars, number of characters before cursor )
-        characters in the line, before the cursor position.
-    """
-    num_chars = min( self.cursor_x, num_chars )
-    return self.line[ self.cursor_x-num_chars:self.cursor_x ]
-
-  def from_cursor_to_right( self, num_chars=None ):
-    """ Get min( num_chars, nchars_from_cursor_to_end() ) characters from and
-        including the character at cursor position to the right.
-        If num_chars = None: return all characters from and including the
-        one at the cursor position to the right.
-    """
-    return self.line[self.cursor_x:]
-
-  def get_length( self ): return len(self.line)
-
 
 
 class TWEdit(TWin):
