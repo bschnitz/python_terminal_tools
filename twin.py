@@ -15,8 +15,10 @@ class TWin(Term):
 
       width:  number of columns window will span
               if width = None: width = terminal_width - y + 1
+              if width < 0: width = terminal_width - width - y + 1
       height: number of rows window will span
               if height = None: width = terminal_heigth - x + 1
+              if height < 0: height = terminal_width - height - x + 1
     """
     self.x = x
     self.y = y
@@ -24,10 +26,14 @@ class TWin(Term):
     if x == None:              self.x = xy[0]
     if y == None:              self.y = xy[1]
 
-    if width  == None or height == None: tsize = super(TWin, self).get_size()
-    if width  == None:                   width  = tsize[0] - self.x + 1
-    if height == None:                   height = tsize[1] - self.y + 1
+    tsize = super(TWin, self).get_size()
 
+    if width  == None: width  = tsize[0] - self.x + 1
+    if height == None: height = tsize[1] - self.y + 1
+
+    if width < 0:  width  = max( tsize[0] + width  - self.x + 1, 0 )
+    if height < 0: height = max( tsize[1] + height - self.y + 1, 0 )
+     
     self.width = width
     self.height = height
 
@@ -35,6 +41,11 @@ class TWin(Term):
     self.bbc = None # bottom border character
     self.lbc = None # left border character
     self.rbc = None # right border character
+
+    self.tlc = None # top left corner character
+    self.trc = None # top right corner character
+    self.blc = None # bottom left corner character
+    self.brc = None # bottom right corner character
 
   def set_border_top( self, character ):
     """ Set the top border for the window
@@ -64,6 +75,34 @@ class TWin(Term):
     """
     self.bbc = character
 
+  def set_border_top_left( self, character ):
+    """ Set the top left corner of the window to character
+
+    Args:
+      character: character to display in the corner
+
+    .. note::
+    · will have no effect, if the window does not have a top or a left border
+    """
+    self.tlc = character
+
+  def set_border_top_right( self, character ):
+    """ Set the top left corner of the window to character
+
+    Args:
+      character: character to display in the corner
+
+    .. note::
+    · will have no effect, if the window does not have a top or a right border
+    """
+    self.trc = character
+
+  def set_border_bottom_left( self, character ):
+    self.blc = character
+
+  def set_border_bottom_right( self, character ):
+    self.brc = character
+
   def set_border_left( self, character ):
     """ Set the left border for the window
 
@@ -77,6 +116,9 @@ class TWin(Term):
       displayed.
     """
     self.lbc = character
+
+  def set_border_right( self, character ):
+    self.rbc = character
 
   def draw( self ):
     """ Draw the window's borders
@@ -92,20 +134,37 @@ class TWin(Term):
 
     if remaining_cols > 0:
       line = 1
+
+      if (self.tbc != None or self.rbc != None) and self.trc != None:
+        self.move_write_xy( remaining_cols, line, self.trc, True )
+
+      if (self.tbc != None or self.lbc != None) and self.tlc != None:
+        self.move_write_xy( 1, line, self.tlc, True )
+
       if self.tbc != None and remaining_lines > 0:
         self.move_write_xy( 2, line, self.tbc * (remaining_cols-2), True )
         remaining_lines -= 1
         line += 1
 
+
       if self.bbc != None: remaining_lines -= 1
 
       while remaining_lines > 0:
-        if self.lbc != None: self.move_write_xy( 1, line, self.lbc, True )
+        if self.lbc != None:
+          self.move_write_xy( 1, line, self.lbc, True )
+        if self.rbc != None:
+          self.move_write_xy( remaining_cols, line, self.rbc, True )
         remaining_lines -= 1
         line = line+1
 
       if self.bbc != None and remaining_lines > -1:
         self.move_write_xy( 2, line, self.bbc * (remaining_cols-2), True )
+
+      if (self.bbc != None or self.lbc != None) and self.blc != None:
+        self.move_write_xy( 1, line, self.blc, True )
+
+      if (self.bbc != None or self.rbc != None) and self.brc != None:
+        self.move_write_xy( remaining_cols, line, self.brc, True )
 
   def move_xy( self, x, y, ignore_border=False ):
     x_off = -1
@@ -163,7 +222,7 @@ class TWin(Term):
 
     return [ x, y, max_cols, max_lines ]
 
-  def list( self, items, item_sep ):
+  def list( self, items, item_sep, max_num_cols=-1 ):
     """ write the strings in items into the window
 
     This function will print the strings inside items into the interior of the
@@ -172,6 +231,13 @@ class TWin(Term):
     one can fit the interior of the window (when using the 'ls' display method).
     The items will be inserted into the grid column by column from left to
     right. The columns of the grid will be seperated by item_sep.
+
+    Args:
+        max_num_cols:
+            This is the maximum number of columns to be created in the grid. If
+            this is negative, as many columns as fitting into the window will be
+            created.
+
     """
     x, y, width, height = self.get_inner_dimensions()
 
@@ -182,11 +248,12 @@ class TWin(Term):
     lines = [""]*height
     max_line_len_prev = 0
     max_line_len_curr = 0
-    while len(items) > 0:
+    for item in  items:
+      if max_num_cols == 0: break
       format = "%-" + str(max_line_len_prev) + "s"
       line = (format % lines[i%height])
       if i >= height: line += item_sep
-      line += items.pop(0)
+      line += item
 
       max_line_len_curr = max( max_line_len_curr, len(line) )
       if max_line_len_curr > width: break
@@ -194,13 +261,16 @@ class TWin(Term):
       lines[i%height] = line
 
       i += 1
-      if i % height == 0: max_line_len_prev = max_line_len_curr
+      if i % height == 0:
+        max_line_len_prev = max_line_len_curr
+        max_num_cols -= 1
 
 
     for i in range(len(lines)):
       format = "%-" + str(width) + "s"
       line = format % lines[i]
       self.move_write_xy( 1, i+1, line )
+  
 
 if __name__ == "__main__":
   win_h = 5

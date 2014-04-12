@@ -56,6 +56,10 @@ class Term:
 
   @staticmethod
   def move_xy(x, y):
+    if x <= 0 or y <= 0:
+      w, h = Term.get_size()
+      if x <= 0: x = max( w+x, 0 )
+      if y <= 0: y = max( h+x, 0 )
     sys.stdout.write( "\033[%d;%dH" % (y, x) )
 
   @staticmethod
@@ -82,6 +86,16 @@ class Term:
 
   @staticmethod
   def flush(): sys.stdout.flush()
+
+  @staticmethod
+  def scroll_clear():
+    """ Add new lines, until the line below the cursor is the Terminals top line
+    """
+    x, y = Term.get_xy()
+    w, h = Term.get_size()
+    print("\n")
+    clear = " "*w
+    print(clear*(h-x-2))
 
 if __name__ == "__main__":
   term = Term()

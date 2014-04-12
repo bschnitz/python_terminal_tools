@@ -6,89 +6,7 @@ import termios
 
 from twin import TWin
 from keys import Keys, ansi
-
-class EditLine():
-  def __init__( self, line ):
-    self.cursor_x = 0
-    self.line = line
-
-  def xcx( self, before, num_chars=None ):
-    """ Get a slice of the line, around the cursor position
-
-    Args:
-        before:
-            Start at most <before> characters before the cursor. If there
-            aren't that many characters before the cursor, start at 0.
-        num_chars: 
-            Get at most <num_chars> characters. If there aren't that many
-            characters after the start position - determined by <before> -, or
-            if <num_chars> equals None get all characters from the start
-            position until the end of the line.
-    """
-    start = max( self.cursor_x - before, 0 )
-    end   = None if num_chars == None else start+num_chars
-    return self.line[ start : end ]
-
-  def nchars_before_cursor( self, max_num_chars ):
-    """ returns how many characters are before the cursor, but at most
-        max_num_chars
-    """
-    return min( self.cursor_x, max_num_chars )
-
-  def move_at( self, x ):
-    """ Move cursor at <x>.
-
-    Args:
-        x:  If <x> is negative, start moving from the left, where the index of
-            the leftmost character is -2 (so <x> == -1 moves the cursor one
-            character behind the end of the line)
-
-    Returns the number of characters, the cursor was actually moved. The return
-    value is negative, if the cursor was moved to the left, 0 if the cursor was
-    not moved and otherwise positive.
-    """
-    if x >= 0: num_chars_moved = x                      - self.cursor_x
-    else:      num_chars_moved = len(self.line) + x + 1 - self.cursor_x
-    self.cursor_x += num_chars_moved
-    return num_chars_moved
-
-  def xpos( self ):
-    return self.cursor_x
-
-  def __getitem__( self, at ):
-    return self.line[at]
-
-  def insert_before_cursor( self, string ):
-    self.line = self.line[0:self.cursor_x] + string + self.line[self.cursor_x:]
-    self.cursor_x += len(string)
-
-  def delete_at_cursor( self, num_chars ):
-    """ deletes min(num_chars, number of characters from cursor to end) from the
-        position to the right and returns how many characters were deleted.
-    """
-    num_chars = min( num_chars, len(self.line) - self.cursor_x )
-    self.line = self.line[0:self.cursor_x] + \
-                self.line[self.cursor_x + num_chars:]
-    return num_chars
-
-  def move_cursor_right( self, num_chars ):
-    """ moves the cursor min(num_chars, number of characters from cursor to end)
-        characters to the right. Returns how many characters the cursor was
-        actually moved.
-    """
-    num_chars = min( num_chars, len(self.line) - self.cursor_x )
-    self.cursor_x += num_chars
-    return num_chars
-
-  def move_cursor_left( self, num_chars ):
-    """ moves the cursor min( num_chars, number of characters before cursor )
-        characters to the left. Returns how many characters the cursor was
-        actually moved.
-    """
-    num_chars = min( num_chars, self.cursor_x )
-    self.cursor_x -= num_chars
-    return num_chars
-
+from eline import EditLine
 
 class TWEdit(TWin):
   def __init__( self, x = None, y = None, width = None ):
@@ -96,6 +14,7 @@ class TWEdit(TWin):
     self.line = EditLine("")
     self.cursor_x = 1
     self.quit_loop = False
+    self.debug = False
     super(TWEdit, self).__init__( x, y, width, 1 )
 
   def map_keys(self):
@@ -112,7 +31,9 @@ class TWEdit(TWin):
     self.keymap['default']          = self.write_char
 
 
-  def quit( self, key ): self.quit_loop = True
+  def quit( self, key ):
+    self.quit_loop = True
+    self.quit_value = self.line.get_line()
 
   def write_char( self, key ):
     self.line.insert_before_cursor( key )
@@ -123,11 +44,8 @@ class TWEdit(TWin):
       self.replace_to_right( chars_around_cursor, 1 )
     else:
       chars_around_cursor = self.line.xcx( 1, width-self.cursor_x+1 )
-      self.move_xy( self.cursor_x, 1 )
       sys.stdout.write( chars_around_cursor )
-      self.move_xy( self.cursor_x+1, 1 )
     self.cursor_x += 1
-    sys.stdout.flush()
 
   def move_left( self, key ):
     num_chars_moved = self.line.move_cursor_left(1)
@@ -136,11 +54,9 @@ class TWEdit(TWin):
         self.cursor_x -= num_chars_moved
       else:
         x, y, width, height = self.get_inner_dimensions()
-        chars_around_cursor = self.line.xcx( width/2, width )
+        chars_around_cursor = self.line.xcx( int(width/2), width )
         self.replace_to_right( chars_around_cursor, 1 )
-        self.cursor_x = self.line.nchars_before_cursor( width/2 ) + 1
-      self.move_xy( self.cursor_x, 1 )
-      self.flush()
+        self.cursor_x = self.line.nchars_before_cursor( int(width/2) ) + 1
 
   def move_right( self, key ):
     num_chars_moved = self.line.move_cursor_right(1)
@@ -148,13 +64,10 @@ class TWEdit(TWin):
       x, y, width, height = self.get_inner_dimensions()
       if self.cursor_x < width:
         self.cursor_x += 1
-        self.move_xy( self.cursor_x, 1 )
       else:
         chars_around_cursor = self.line.xcx( int(width/2), width )
         self.replace_to_right( chars_around_cursor, 1 )
-        self.cursor_x = self.line.nchars_before_cursor( width/2 ) + 1
-      self.move_xy( self.cursor_x, 1 )
-      self.flush()
+        self.cursor_x = self.line.nchars_before_cursor( int(width/2) ) + 1
 
   def move_to_start( self, key ):
     x, y, width, height = self.get_inner_dimensions()
@@ -171,14 +84,12 @@ class TWEdit(TWin):
       self.replace_to_right( self.line.xcx( self.cursor_x-1 ), 1 )
     else:
       self.cursor_x += num_chars_moved
-      self.move_xy( self.cursor_x, 1 )
 
   def del_at( self, key ):
     num_chars_deleted = self.line.delete_at_cursor(1)
     if num_chars_deleted > 0:
       self.move_xy( self.cursor_x, 1 )
       self.replace_to_right( self.line.xcx(0) )
-      sys.stdout.flush()
 
   def del_left( self, key ):
     self.move_left( key )
@@ -260,17 +171,19 @@ class TWEdit(TWin):
     while not self.quit_loop:
       key = self.getch()
       self.process_key(key)
-    return self.line
+      self.flush()
+    return self.quit_value
 
   def process_key( self, key ):
     if key in self.keymap: rval = self.keymap[key]( key )
     else:                  rval = self.keymap['default']( key )
-    self.move_write_xy(1, -1, " Line: %3d " % self.line.cursor_x)
-    self.move_write_xy(1,  0, " Edit: %3d " % self.cursor_x)
     self.move_xy( self.cursor_x, 1 )
     self.flush()
+    if self.debug:
+      self.move_write_xy(1, -1, " Line: %3d " % self.line.cursor_x)
+      self.move_write_xy(1,  0, " Edit: %3d " % self.cursor_x)
+      self.move_xy( self.cursor_x, 1 )
     return rval
-
 
 if __name__ == "__main__":
   x, y = TWEdit.get_xy()
