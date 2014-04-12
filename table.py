@@ -7,7 +7,7 @@ from twin import TWin
 from term import Term
 from functools import reduce
 
-class TableField():
+class TableFieldFormat():
   def __init__(self, width_min = 0, width_max = -1):
     self.width = {}
     self.width['min'] = width_min
@@ -21,6 +21,11 @@ class TableField():
     return formatted[:self.width['act']]
 
   def set_format( self, fmt ): self.fmt = fmt
+
+class TableField():
+  def __init__(self, content):
+    self.content = content
+    self.fmt = TableFieldFormat()
 
 class Table(TWin):
   """ Initialize a Table Terminal Window Object
@@ -46,8 +51,8 @@ class Table(TWin):
     self.ncols = ncols
     self.colsep = "  "
     #self.rows = list()
-    self.rows = [["12345", "98765", "Hallo Welt!"]]
-    self.row_format = [TableField() for _ in range(ncols)]
+    self.rows = [["12", "2", "Hallo Welt!"]]
+    self.row_format = [TableFieldFormat() for _ in range(ncols)]
     super().__init__( x, y, width, height )
 
   def test_coln(self, *cols):
@@ -61,6 +66,12 @@ class Table(TWin):
 
   def set_min_colw(self, *colw): self.set_colw( 'min', *colw )
   def set_max_colw(self, *colw): self.set_colw( 'max', *colw )
+
+  def add_row(self, *cols):
+    self.test_coln(cols)
+    self.rows.append(cols)
+
+  def set_format( self, colnr, fmt ): self.row_format[colnr].set_format( fmt )
 
   def push_row(self, *cols):
     self.test_coln(*cols)
@@ -131,13 +142,6 @@ class Table(TWin):
         sys.stdout.write(formatted_text)
     super().draw()
 
-    #super().draw()
-    #self.move_write_xy( 1, 1, "hello worlds" )
-    #self.calculate_column_sizes()
-    #sizes = list(cf.width['act'] for cf in self.row_format)
-    #self.move_write_xy( 1, 2, repr(sizes) )
-    #self.move_write_xy( 1, 3, repr(self.get_inner_dimensions()) )
-
 if __name__ == "__main__":
   table = Table(3, x=1, y=1)
   table.set_border_top("═")
@@ -153,7 +157,11 @@ if __name__ == "__main__":
   #table.set_border_bottom_left("╚")
   #table.set_border_bottom_right("╝")
   table.set_max_colw(3,2,-1)
+  table.set_format(0, '{content:>{width}}')
+  table.set_format(1, '{content:>{width}}')
   table.scroll_clear()
+  with open('table_test') as fp:
+    for line in fp: table.add_row(*line.strip().split(','))
   table.draw()
   Term.move_xy(0, 0)
   table.flush()
