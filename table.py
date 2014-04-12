@@ -23,9 +23,11 @@ class TableFieldFormat():
   def set_format( self, fmt ): self.fmt = fmt
 
 class TableField():
-  def __init__(self, content):
-    self.content = content
-    self.fmt = TableFieldFormat()
+  def __init__(self, field_content, field_format):
+    self.content = field_content
+    self.fmt = field_format
+
+  def get_formatted_content(self): return self.fmt.formatter(self.content)
 
 class Table(TWin):
   """ Initialize a Table Terminal Window Object
@@ -50,8 +52,7 @@ class Table(TWin):
   def __init__(self, ncols, x=None, y=None, width=None, height=None):
     self.ncols = ncols
     self.colsep = "  "
-    #self.rows = list()
-    self.rows = [["12", "2", "Hallo Welt!"]]
+    self.rows = list()
     self.row_format = [TableFieldFormat() for _ in range(ncols)]
     super().__init__( x, y, width, height )
 
@@ -67,15 +68,12 @@ class Table(TWin):
   def set_min_colw(self, *colw): self.set_colw( 'min', *colw )
   def set_max_colw(self, *colw): self.set_colw( 'max', *colw )
 
-  def add_row(self, *cols):
+  def append_row(self, *cols):
     self.test_coln(cols)
-    self.rows.append(cols)
+    row = [TableField(col, fmt) for col,fmt in zip(cols, self.row_format)]
+    self.rows.append(row)
 
   def set_format( self, colnr, fmt ): self.row_format[colnr].set_format( fmt )
-
-  def push_row(self, *cols):
-    self.test_coln(*cols)
-    self.rows.append(copy.deepcopy(cols))
 
   def test_column_sizes(self):
     for col_f in self.row_format:
@@ -120,13 +118,19 @@ class Table(TWin):
       shrink_factor = cum_col_size/max_cum_colw
       for cf in rf: cf.width['act'] = int( cf.width['act']*shrink_factor )
 
-    # because of rounding down with int, we might have to add some 1s
+    # because of rounding down with int and because some of the columns
+    # reduced to zero width, me might have some additional space to distribute
+    # (we will not distribute that on columns which have zero width)
+    ncols = reduce( lambda nc,cf: nc + 1 if cf.width['act']>0 else 0, rf, 0 )
+    nc_diff = self.ncols - ncols
     cum_col_size = reduce( lambda size,cf: size+cf.width['act'], rf, 0 )
+    cum_col_size += nc_diff * len(self.colsep)
     for cf in rf:
       if cum_col_size == max_cum_colw: break
-      if cf.width['act'] < cf.width['max'] or cf.width['max'] < 0:
-        cf.width['act'] += 1
-        cum_col_size += 1
+      if cf.width['act'] > 0:
+        if cf.width['act'] < cf.width['max'] or cf.width['max'] < 0:
+          cf.width['act'] += 1
+          cum_col_size += 1
 
     return True
 
@@ -137,9 +141,8 @@ class Table(TWin):
     num_rows = min(win_height, len(self.rows))
     for nrow in range(num_rows):
       self.move_xy(1, nrow+1)
-      for col, fmt, sep in zip( self.rows[nrow], self.row_format, seperators ):
-        formatted_text = fmt.formatter(col) + sep
-        sys.stdout.write(formatted_text)
+      for col, sep in zip( self.rows[nrow], seperators ):
+        sys.stdout.write(col.get_formatted_content() + sep)
     super().draw()
 
 if __name__ == "__main__":
@@ -161,7 +164,7 @@ if __name__ == "__main__":
   table.set_format(1, '{content:>{width}}')
   table.scroll_clear()
   with open('table_test') as fp:
-    for line in fp: table.add_row(*line.strip().split(','))
+    for line in fp: table.append_row(*line.strip().split(','))
   table.draw()
   Term.move_xy(0, 0)
   table.flush()
