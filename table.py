@@ -15,6 +15,7 @@ class TableFieldFormat():
     self.width['act'] = None
     self.fmt = '{content:<{width}}'
     self.formatter = self.default_formatter
+    self.lt = lambda f1, f2: f1.content < f2.content
 
   def default_formatter( self, column_content ):
     formatted = self.fmt.format(content=column_content, width=self.width['act'])
@@ -22,12 +23,32 @@ class TableFieldFormat():
 
   def set_format( self, fmt ): self.fmt = fmt
 
+class TableRowFormat():
+  def __init__(self, num_cols):
+    self.sort_order = range(num_cols)
+
+  def set_sort_order(self, *column_indexes):
+    self.sort_order = column_indexes
+
 class TableField():
   def __init__(self, field_content, field_format):
     self.content = field_content
     self.fmt = field_format
 
   def get_formatted_content(self): return self.fmt.formatter(self.content)
+
+  def __lt__(self, other): return self.fmt.lt(self, other)
+
+class TableRow():
+  def __init__(self, row_format, *cols):
+    self.cols = cols
+    self.fmt = row_format
+
+  def __lt__( self, other ):
+    for i in self.fmt.sort_order:
+      if self.cols[i] < other.cols[i]: return True
+      elif self.cols[i] > other.cols[i]: return False
+    return False
 
 class Table(TWin):
   """ Initialize a Table Terminal Window Object
@@ -53,7 +74,8 @@ class Table(TWin):
     self.ncols = ncols
     self.colsep = "  "
     self.rows = list()
-    self.row_format = [TableFieldFormat() for _ in range(ncols)]
+    self.row_format = TableRowFormat(ncols)
+    self.field_format = [TableFieldFormat() for _ in range(ncols)]
     super().__init__( x, y, width, height )
 
   def test_coln(self, *cols):
@@ -63,20 +85,20 @@ class Table(TWin):
 
   def set_colw(self, which, *colw):
     self.test_coln(colw)
-    for col_f, w in zip(self.row_format, colw): col_f.width[which] = int(w)
+    for col_f, w in zip(self.field_format, colw): col_f.width[which] = int(w)
 
   def set_min_colw(self, *colw): self.set_colw( 'min', *colw )
   def set_max_colw(self, *colw): self.set_colw( 'max', *colw )
 
   def append_row(self, *cols):
     self.test_coln(cols)
-    row = [TableField(col, fmt) for col,fmt in zip(cols, self.row_format)]
-    self.rows.append(row)
+    row = [TableField(col, fmt) for col,fmt in zip(cols, self.field_format)]
+    self.rows.append( TableRow(self.row_format, *row) )
 
-  def set_format( self, colnr, fmt ): self.row_format[colnr].set_format( fmt )
+  def set_format( self, colnr, fmt ): self.field_format[colnr].set_format( fmt )
 
   def test_column_sizes(self):
-    for col_f in self.row_format:
+    for col_f in self.field_format:
       if col_f.width['max'] > 0 and col_f.width['max'] < col_f.width['min']:
         error = "minimum colum size exceeds maximum column size for column {0}"
         raise Exception( error.format(i) )
@@ -86,10 +108,10 @@ class Table(TWin):
     x, y, max_cum_colw, h = self.get_inner_dimensions()
     max_cum_colw -= len(self.colsep) * (self.ncols-1)
 
-    rf = self.row_format
+    rf = self.field_format
 
     # init maximum col sizes to terminal width, if they are -1
-    for col_w in (col_f.width for col_f in self.row_format):
+    for col_w in (col_f.width for col_f in self.field_format):
       col_w['act'] = max_cum_colw if col_w['max']<0 else col_w['max']
 
     i = 0
@@ -134,6 +156,13 @@ class Table(TWin):
 
     return True
 
+  def set_lt( self, ncol, lt ): self.field_format[ncol].lt = lt
+
+  def set_sort_order( self, *column_indexes ):
+    self.row_format.set_sort_order(*column_indexes)
+
+  def sort( self ): self.rows.sort()
+
   def draw(self):
     self.calculate_column_sizes()
     seperators = (self.ncols-1) * [self.colsep] + ['']
@@ -141,7 +170,7 @@ class Table(TWin):
     num_rows = min(win_height, len(self.rows))
     for nrow in range(num_rows):
       self.move_xy(1, nrow+1)
-      for col, sep in zip( self.rows[nrow], seperators ):
+      for col, sep in zip( self.rows[nrow].cols, seperators ):
         sys.stdout.write(col.get_formatted_content() + sep)
     super().draw()
 
@@ -165,6 +194,9 @@ if __name__ == "__main__":
   table.scroll_clear()
   with open('table_test') as fp:
     for line in fp: table.append_row(*line.strip().split(','))
+  table.set_lt( 0, lambda f1, f2: int(f1.content) > int(f2.content) )
+  table.set_sort_order( 1, 2 )
+  table.sort()
   table.draw()
   Term.move_xy(0, 0)
   table.flush()
