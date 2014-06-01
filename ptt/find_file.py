@@ -18,7 +18,7 @@
 # 'Python Terminal Tools'. If not, see <http://www.gnu.org/licenses/>.
 
 import os
-from term.terminal import Term
+from ptt.terminal import Term
 from quicksel import QuickSel
 
 class FindFile(QuickSel):

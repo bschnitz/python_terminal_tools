@@ -19,7 +19,7 @@
 
 import sys
 
-from term.terminal import Term
+from ptt.terminal import Term
 
 class TWin(Term):
   def __init__( self, x = None, y = None, width = None, height = None ):

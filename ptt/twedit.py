@@ -21,9 +21,9 @@ import os
 import sys
 import termios
 
-from twin import TWin
-from keys import Keys, ansi
-from eline import EditLine
+from ptt.twin import TWin
+from ptt.keys import Keys, ansi
+from ptt.eline import EditLine
 
 class TWEdit(TWin):
   def __init__( self, x = None, y = None, width = None ):

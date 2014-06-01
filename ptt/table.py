@@ -17,10 +17,11 @@
 # You should have received a copy of the GNU General Public License along with
 # 'Python Terminal Tools'. If not, see <http://www.gnu.org/licenses/>.
 
+import ptt
+from ptt.twin import TWin
 import sys
 import copy
 
-from term.twin import TWin
 from functools import reduce
 
 
@@ -254,7 +255,8 @@ if __name__ == "__main__":
   table.set_format(1, fmt_h, True)
   table.set_format(2, fmt_h, True)
 
-  with open('table_test') as fp:
+  module_path = ptt.__path__[0]
+  with open(module_path + '/table_test') as fp:
     for line in fp: table.append_row(*line.strip().split(','))
   table.set_lt( 1, lambda f1, f2: int(f1.content) > int(f2.content) )
   table.set_sort_order( 1, 2 )

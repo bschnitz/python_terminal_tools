@@ -25,9 +25,9 @@
    .. moduleauthor:: Benjamin Schnitzler <benjaminschnitzler@googlemail.com>
 """
 
-from term.terminal import Term
-from term.twin import TWin
-from term.twedit import TWEdit
+from ptt.terminal import Term
+from ptt.twin import TWin
+from ptt.twedit import TWEdit
 
 class QuickSel(TWEdit):
   def __init__( self, selections, x=2, y=None, width=-1, height=5 ):
