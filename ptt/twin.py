@@ -1,8 +1,25 @@
 #!/usr/bin/env python3
 
+# Copyright 2014 Benjamin Schnitzler <benjaminschnitzler@googlemail.com>
+
+# This file is part of 'Python Terminal Tools'
+# 
+# 'Python Terminal Tools' is free software: you can redistribute it and/or
+# modify it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or (at your
+# option) any later version.
+# 
+# 'Python Terminal Tools' is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+# 
+# You should have received a copy of the GNU General Public License along with
+# 'Python Terminal Tools'. If not, see <http://www.gnu.org/licenses/>.
+
 import sys
 
-from term import Term
+from term.terminal import Term
 
 class TWin(Term):
   def __init__( self, x = None, y = None, width = None, height = None ):
@@ -52,6 +69,33 @@ class TWin(Term):
     self.trc = None # top right corner character
     self.blc = None # bottom left corner character
     self.brc = None # bottom right corner character
+
+  def resize( self, width = None, height = None ):
+    tsize = super(TWin, self).get_size()
+
+    if width  == None: width  = tsize[0] - self.x + 1
+    if height == None: height = tsize[1] - self.y + 1
+
+    if width  < 0: width  = max( tsize[0] + width  - self.x + 1, 0 )
+    if height < 0: height = max( tsize[1] + height - self.y + 1, 0 )
+     
+    self.width = width
+    self.height = height
+
+  def move( self, x = None, y = None ):
+    self.x = x
+    self.y = y
+
+    tsize = super(TWin, self).get_size()
+
+    if x == None or y == None or x<0 or y<0:
+      xy = self.get_xy()
+
+      if x == None: self.x = xy[0]
+      elif x < 0: self.x = tsize[0] + x
+
+      if y == None: self.y = xy[1]
+      elif y < 0: self.y = tsize[1] + y
 
   def set_border_top( self, character ):
     """ Set the top border for the window

@@ -1,5 +1,22 @@
 #!/usr/bin/env python3
 
+# Copyright 2014 Benjamin Schnitzler <benjaminschnitzler@googlemail.com>
+
+# This file is part of 'Python Terminal Tools'
+# 
+# 'Python Terminal Tools' is free software: you can redistribute it and/or
+# modify it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or (at your
+# option) any later version.
+# 
+# 'Python Terminal Tools' is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+# 
+# You should have received a copy of the GNU General Public License along with
+# 'Python Terminal Tools'. If not, see <http://www.gnu.org/licenses/>.
+
 import sys
 import tty
 import fcntl
@@ -7,6 +24,14 @@ import struct
 import termios
 
 class Term:
+  sgr_map = {
+      'bold':'1',
+      'b':'1',
+      'underline':'4',
+      'underlined':'4',
+      'u':'4',
+  }
+
   @staticmethod
   def query( sequence, end ):
     fd = sys.stdin.fileno()
@@ -55,6 +80,15 @@ class Term:
     sys.stdout.write("\033[2J")
 
   @staticmethod
+  def sgr_esc(text, *flags, **params):
+    escape = ""
+    for flag in flags: escape += "\033["+Term.sgr_map[flag]+"m"
+    if 'fg' in params: escape += "\033[38;5;"+str(params['fg'])+"m"
+    if 'bg' in params: escape += "\033[48;5;"+str(params['bg'])+"m"
+    for flag in params.get('flags', ''): escape +="\033["+Term.sgr_map[flag]+"m"
+    return escape + text + params.get( 'reset', "\033[0m" )
+
+  @staticmethod
   def move_xy(x, y):
     if x <= 0 or y <= 0:
       w, h = Term.get_size()
@@ -88,14 +122,20 @@ class Term:
   def flush(): sys.stdout.flush()
 
   @staticmethod
-  def scroll_clear():
-    """ Add new lines, until the line below the cursor is the Terminals top line
+  def scroll_clear(nlines=None):
+    """ Ensure, that at least nlines follow the current cursor position, by
+        adding an appropriate number of lines.
+
+        This method will however output no more lines, than the height of the
+        terminal in lines.
     """
-    x, y = Term.get_xy()
-    w, h = Term.get_size()
-    print("\n")
-    clear = " "*w
-    print(clear*(h-x-2))
+    x,y = Term.get_xy()
+    w,h = Term.get_size()
+    nlines = min(nlines, h)
+    num_new_lines = y-h+nlines
+    sys.stdout.write("\n"*(nlines-1))
+    if num_new_lines > 0: Term.move_xy(x,y-num_new_lines+1)
+    else:                 Term.move_xy(x,y)
 
 if __name__ == "__main__":
   term = Term()

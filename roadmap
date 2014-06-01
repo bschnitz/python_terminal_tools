@@ -9,6 +9,15 @@ Edit:
   haben)
 · move_xy für TWEditor implementieren, das den Cursor auch bewegt
 
+EventManager Klasse hinzufügen
+
+Table:
+· Scroll Funktion
+· highlighting von Zeilen und Spalten
+  - aktuelle Zeile, Spalte
+  - Zeilen zweifarbig ...
+· Mehrzeilige Zellen
+
 Phase 2:
 TWEditor und TWEditorLines:
 · mehrzeiliger Editor

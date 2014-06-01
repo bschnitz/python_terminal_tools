@@ -1,11 +1,28 @@
 #!/usr/bin/env python3
 
+# Copyright 2014 Benjamin Schnitzler <benjaminschnitzler@googlemail.com>
+
+# This file is part of 'Python Terminal Tools'
+# 
+# 'Python Terminal Tools' is free software: you can redistribute it and/or
+# modify it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or (at your
+# option) any later version.
+# 
+# 'Python Terminal Tools' is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+# 
+# You should have received a copy of the GNU General Public License along with
+# 'Python Terminal Tools'. If not, see <http://www.gnu.org/licenses/>.
+
 import sys
 import copy
 
-from twin import TWin
-from term import Term
+from term.twin import TWin
 from functools import reduce
+
 
 class TableFieldFormat():
   def __init__(self, width_min = 0, width_max = -1):
@@ -17,11 +34,13 @@ class TableFieldFormat():
     self.formatter = self.default_formatter
     self.lt = lambda f1, f2: f1.content < f2.content
 
-  def default_formatter( self, column_content ):
-    formatted = self.fmt.format(content=column_content, width=self.width['act'])
-    return formatted[:self.width['act']]
+  def default_formatter( self, field ):
+    field_content = field.content[:self.width['act']]
+    return self.fmt.format(content=field_content, width=self.width['act'])
 
   def set_format( self, fmt ): self.fmt = fmt
+
+  def format( self, field ): return self.formatter( field )
 
 class TableRowFormat():
   def __init__(self, num_cols):
@@ -35,7 +54,9 @@ class TableField():
     self.content = field_content
     self.fmt = field_format
 
-  def get_formatted_content(self): return self.fmt.formatter(self.content)
+  def get_formatted_content(self, field_format=None):
+    if field_format == None: field_format = self.fmt
+    return field_format.format(self)
 
   def __lt__(self, other): return self.fmt.lt(self, other)
 
@@ -76,7 +97,15 @@ class Table(TWin):
     self.rows = list()
     self.row_format = TableRowFormat(ncols)
     self.field_format = [TableFieldFormat() for _ in range(ncols)]
+    self.header = None
     super().__init__( x, y, width, height )
+
+  def add_header(self, *cols):
+    self.test_coln(cols)
+    row_format = TableRowFormat(self.ncols)
+    field_format = [TableFieldFormat() for _ in range(self.ncols)]
+    row = [TableField(col, fmt) for col,fmt in zip(cols, field_format)]
+    self.header = TableRow(self.row_format, *row)
 
   def test_coln(self, *cols):
     if( len(*cols) != self.ncols ):
@@ -95,7 +124,15 @@ class Table(TWin):
     row = [TableField(col, fmt) for col,fmt in zip(cols, self.field_format)]
     self.rows.append( TableRow(self.row_format, *row) )
 
-  def set_format( self, colnr, fmt ): self.field_format[colnr].set_format( fmt )
+  def set_format( self, colnr, fmt, apply_on_header=False ):
+    if not apply_on_header:
+      self.field_format[colnr].set_format( fmt )
+    else:
+      if self.header != None:
+        self.header.cols[colnr].fmt.set_format( fmt )
+      else:
+        error = "Header must be initialized, before its format can be changed."
+        raise Exception( error )
 
   def test_column_sizes(self):
     for col_f in self.field_format:
@@ -154,6 +191,11 @@ class Table(TWin):
           cf.width['act'] += 1
           cum_col_size += 1
 
+    if self.header != None:
+      for col,cf in zip(self.header.cols, rf):
+        col.fmt.width['act'] = cf.width['act']
+
+
     return True
 
   def set_lt( self, ncol, lt ): self.field_format[ncol].lt = lt
@@ -168,14 +210,24 @@ class Table(TWin):
     seperators = (self.ncols-1) * [self.colsep] + ['']
     x, y, win_width, win_height = self.get_inner_dimensions()
     num_rows = min(win_height, len(self.rows))
+    first_row = 0
+    if self.header != None:
+      self.move_xy(1, 1)
+      for col, sep in zip( self.header.cols, seperators ):
+        sys.stdout.write(col.get_formatted_content() + sep)
+      first_row = 1
     for nrow in range(num_rows):
-      self.move_xy(1, nrow+1)
+      self.move_xy(1, nrow+1+first_row)
       for col, sep in zip( self.rows[nrow].cols, seperators ):
         sys.stdout.write(col.get_formatted_content() + sep)
     super().draw()
 
+
 if __name__ == "__main__":
-  table = Table(3, x=1, y=1)
+  Table.scroll_clear(12)
+
+  table = Table(3, x=1, height=12)
+  table.flush()
   table.set_border_top("═")
   table.set_border_bottom("═")
   #table.set_border_left("║")
@@ -188,17 +240,26 @@ if __name__ == "__main__":
   table.set_border_bottom_right("═")
   #table.set_border_bottom_left("╚")
   #table.set_border_bottom_right("╝")
-  table.set_max_colw(3,2,-1)
+  table.set_max_colw(3,3,-1)
+  #table.set_format(0, '\033[0;31m{content:>{width}}\033[0m')
   table.set_format(0, '{content:>{width}}')
   table.set_format(1, '{content:>{width}}')
-  table.scroll_clear()
+
+  # add and format table header
+  table.add_header(" Id", "-!-", "Todobidubido")
+  #fmt_h = Term.sgr_esc("{content:<{width}}", flags="ub", fg=0x00, bg=0x76 )
+  fmt_h = Table.sgr_esc("{content:<{width}}", flags="b", fg=0x76 )
+  #fmt_h1 = "\033[48;5;\xca{content:>{width}}\033[0m"
+  table.set_format(0, fmt_h, True)
+  table.set_format(1, fmt_h, True)
+  table.set_format(2, fmt_h, True)
+
   with open('table_test') as fp:
     for line in fp: table.append_row(*line.strip().split(','))
-  table.set_lt( 0, lambda f1, f2: int(f1.content) > int(f2.content) )
+  table.set_lt( 1, lambda f1, f2: int(f1.content) > int(f2.content) )
   table.set_sort_order( 1, 2 )
   table.sort()
   table.draw()
-  Term.move_xy(0, 0)
   table.flush()
   table.get_char_raw()
   print()
