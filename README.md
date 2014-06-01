@@ -2,7 +2,7 @@
 
 #### DESCRIPTION
 
-**Warning**
+**Warning**<br />
 This is the developement branch. If you want to use 'Python Terminal Tools',
 you should switch to the master branch.
 
