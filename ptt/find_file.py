@@ -19,7 +19,7 @@
 
 import os
 from ptt.terminal import Term
-from quicksel import QuickSel
+from ptt.quicksel import QuickSel
 
 class FindFile(QuickSel):
   def __init__( self, path=".", x=2, y=None, width=-1, height=25 ):
