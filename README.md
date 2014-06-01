@@ -23,6 +23,8 @@ And everytime you want to update this repository do:
 
     git submodule update
 
+additionally to the normal pull/fetch requests.
+
 See the README in the ptt directory (the submodules directory), for why this is
 done.
 
