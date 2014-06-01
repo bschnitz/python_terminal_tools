@@ -1,0 +1,4 @@
+[submodule "ptt"]
+	path = ptt
+	url = git@github.com:bschnitz/python_terminal_tools.git
+	branch = ptt

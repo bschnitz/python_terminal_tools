@@ -9,6 +9,24 @@ Yet to come.
 'Python Terminal Tools' is licensed under version 3 of the GNU General Public
 License.
 
+#### INSTALLATION
+
+This branch of the 'Python Terminal Tools' contains another branch of the same
+repository as a submodule. This submodule must be initialized first.
+
+**in short:** After having cloned this repository do:
+
+    git submodule init
+
+    git submodule update
+
+And everytime you want to update this repository do:
+
+    git submodule update
+
+See the README in the ptt directory (the submodules directory), for why this is
+done.
+
 #### EXAMPLES
 
 To test this package on the fly, without installing it, You have to make sure,
