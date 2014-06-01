@@ -17,7 +17,6 @@ repository as a submodule. This submodule must be initialized first.
 **in short:** After having cloned this repository do:
 
     git submodule init
-
     git submodule update
 
 And everytime you want to update this repository do:
