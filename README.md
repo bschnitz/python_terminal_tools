@@ -2,7 +2,9 @@
 
 #### DESCRIPTION
 
-Yet to come.
+**Warning**
+This is the developement branch. If you want to use 'Python Terminal Tools',
+you should switch to the master branch.
 
 #### LICENSE
 
