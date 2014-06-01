@@ -20,7 +20,7 @@ of the python program).
 directory is located* (this should also be the directory, where this readme is
 located), You can do this, for example:
 
-  PYTHONPATH=. python3 examples/table.py
+    PYTHONPATH=. python3 examples/table.py
 
 #### CONTACT
 
