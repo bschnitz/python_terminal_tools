@@ -17,22 +17,9 @@
 # You should have received a copy of the GNU General Public License along with
 # 'Python Terminal Tools'. If not, see <http://www.gnu.org/licenses/>.
 
-import os
-from ptt.terminal import Term
-from ptt.quicksel import QuickSel
+from ptt.twedit import TWEdit
 
-class FindFile(QuickSel):
-  def __init__( self, path=".", x=2, y=None, width=-1, height=25 ):
-    super(FindFile, self).__init__( [], x, y, width, height )
-    self.selections = self.scan_path( path )
-    self.display_selection( 0 )
-
-  def scan_path( self, path ):
-    files = []
-    for root, dirs, filenames in os.walk(path):
-      for filename in filenames:
-        files.append( (root + "/" + filename)[-self.width:] )
-    return files
-
-  def display_selection( self, time=1 ):
-    self.sel_win.list( self.get_selection(time), "  ", 1 )
+x, y = TWEdit.get_xy()
+with TWEdit( 4, y ) as edit:
+  edit.event_loop()
+print()

@@ -320,30 +320,3 @@ class TWin(Term):
       format = "%-" + str(width) + "s"
       line = format % lines[i]
       self.move_write_xy( 1, i+1, line )
-  
-
-if __name__ == "__main__":
-  win_h = 5
-  print("\n" * win_h, end="")
-  sys.stdout.flush()
-  x, y = Term.get_xy()
-  y -= (win_h-1) 
-  win = TWin( x, y, None, win_h )
-  win.set_border_top( "=" )
-  #win.set_border_bottom( "=" )
-  win.set_border_left( " " )
-  win.draw()
-  win.list( [ "hallo", "welt", "ich", "bin", "ein",
-              "sehr", "schöner", "Mensch", "ohne", "Makel" ], "  " )
-  Term.move_xy( 2, y-1)
-  sys.stdout.flush()
-  char = Term.get_char_raw()
-  while char != "q":
-    win.draw()
-    win.list( [ "hallo", "welt", "ich", "bin", "ein",
-                "sehr", "schöner", "Mensch", "ohne", "Makel" ], "  " )
-    Term.move_xy( 2, y-1)
-    sys.stdout.flush()
-    char = Term.get_char_raw()
-  Term.move_xy( 1, y+(win_h-1))
-  print()

@@ -136,19 +136,3 @@ class Term:
     sys.stdout.write("\n"*(nlines-1))
     if num_new_lines > 0: Term.move_xy(x,y-num_new_lines+1)
     else:                 Term.move_xy(x,y)
-
-if __name__ == "__main__":
-  term = Term()
-  x, y = term.get_xy()
-  term.move_xy(1,1)
-  term.erase_line()
-  print( x, y )
-  print( term.get_size() )
-
-  char = term.get_char_raw()
-  while char != "q":
-    print(char, end="")
-    sys.stdout.flush()
-    char = term.get_char_raw()
-
-  term.move_xy( x, y )

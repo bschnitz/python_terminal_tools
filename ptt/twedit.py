@@ -201,9 +201,3 @@ class TWEdit(TWin):
       self.move_write_xy(1,  0, " Edit: %3d " % self.cursor_x)
       self.move_xy( self.cursor_x, 1 )
     return rval
-
-if __name__ == "__main__":
-  x, y = TWEdit.get_xy()
-  with TWEdit( 4, y ) as edit:
-    edit.event_loop()
-  print()

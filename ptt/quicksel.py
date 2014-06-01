@@ -125,14 +125,3 @@ class QuickSel(TWEdit):
         result.append(string)
 
     return result
-
-if __name__ == "__main__":
-  testlist = [
-      "hallo", "welt", "ich", "bin", "ein",
-      "sehr", "schöner", "Mensch", "ohne", "Makel"
-  ]
-
-  with QuickSel( testlist ) as qsel:
-    selected = qsel.event_loop()
-
-  print(selected)

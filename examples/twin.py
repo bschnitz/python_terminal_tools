@@ -17,22 +17,31 @@
 # You should have received a copy of the GNU General Public License along with
 # 'Python Terminal Tools'. If not, see <http://www.gnu.org/licenses/>.
 
-import os
+import sys
+from ptt.twin import TWin
 from ptt.terminal import Term
-from ptt.quicksel import QuickSel
 
-class FindFile(QuickSel):
-  def __init__( self, path=".", x=2, y=None, width=-1, height=25 ):
-    super(FindFile, self).__init__( [], x, y, width, height )
-    self.selections = self.scan_path( path )
-    self.display_selection( 0 )
-
-  def scan_path( self, path ):
-    files = []
-    for root, dirs, filenames in os.walk(path):
-      for filename in filenames:
-        files.append( (root + "/" + filename)[-self.width:] )
-    return files
-
-  def display_selection( self, time=1 ):
-    self.sel_win.list( self.get_selection(time), "  ", 1 )
+win_h = 5
+print("\n" * win_h, end="")
+sys.stdout.flush()
+x, y = Term.get_xy()
+y -= (win_h-1) 
+win = TWin( x, y, None, win_h )
+win.set_border_top( "=" )
+#win.set_border_bottom( "=" )
+win.set_border_left( " " )
+win.draw()
+win.list( [ "hallo", "welt", "ich", "bin", "ein",
+            "sehr", "schöner", "Mensch", "ohne", "Makel" ], "  " )
+Term.move_xy( 2, y-1)
+sys.stdout.flush()
+char = Term.get_char_raw()
+while char != "q":
+  win.draw()
+  win.list( [ "hallo", "welt", "ich", "bin", "ein",
+              "sehr", "schöner", "Mensch", "ohne", "Makel" ], "  " )
+  Term.move_xy( 2, y-1)
+  sys.stdout.flush()
+  char = Term.get_char_raw()
+Term.move_xy( 1, y+(win_h-1))
+print()
